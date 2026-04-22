@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Online Exam System — Network Topology</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: #050a12;
+  font-family: 'Rajdhani', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  color: #c9d8ef;
+}
+
+/* Animated grid bg */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image:
+    linear-gradient(rgba(0,180,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,180,255,0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  animation: gridPulse 6s ease-in-out infinite;
+  pointer-events:none; z-index:0;
+}
+@keyframes gridPulse { 0%,100%{opacity:.6} 50%{opacity:1} }
+
+header {
+  text-align:center;
+  padding: 32px 20px 20px;
+  position:relative; z-index:2;
+}
+
+header h1 {
+  font-family:'Rajdhani',sans-serif;
+  font-size: clamp(18px, 3vw, 30px);
+  font-weight:700;
+  letter-spacing:4px;
+  text-transform:uppercase;
+  color:#fff;
+  text-shadow: 0 0 30px rgba(0,200,255,0.5);
+}
+
+header p {
+  font-family:'Share Tech Mono', monospace;
+  font-size:11px;
+  color:#3a7a9c;
+  letter-spacing:2px;
+  margin-top:6px;
+}
+
+.legend {
+  display:flex; justify-content:center; gap:20px; flex-wrap:wrap;
+  padding: 10px 20px 16px;
+  position:relative; z-index:2;
+}
+.leg-item { display:flex; align-items:center; gap:7px; font-size:12px; font-family:'Share Tech Mono',monospace; color:#4a7fa0; }
+.leg-dot { width:10px; height:10px; border-radius:50%; }
+
+/* SVG canvas */
+.topo-wrap {
+  position:relative; z-index:1;
+  display:flex; justify-content:center; align-items:flex-start;
+  padding: 0 16px 40px;
+}
+
+svg {
+  width: 100%;
+  max-width: 980px;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 0 40px rgba(0,150,255,0.08));
+}
+
+/* Tooltip */
+.tooltip {
+  position:fixed;
+  background: rgba(5,15,30,0.97);
+  border: 1px solid rgba(0,200,255,0.35);
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-family:'Share Tech Mono',monospace;
+  font-size:11px;
+  line-height:1.7;
+  color:#7de0ff;
+  pointer-events:none;
+  z-index:100;
+  opacity:0;
+  transition: opacity 0.2s;
+  max-width:220px;
+  box-shadow: 0 0 20px rgba(0,200,255,0.15);
+}
+.tooltip.show { opacity:1; }
+.tooltip strong { color:#fff; font-size:12px; display:block; margin-bottom:4px; border-bottom:1px solid rgba(0,200,255,0.2); padding-bottom:4px; }
+.tooltip span { color:#4a9fc4; }
+
+/* Animate connection lines */
+@keyframes dashFlow {
+  to { stroke-dashoffset: -20; }
+}
+
+.flow-line {
+  animation: dashFlow 1.2s linear infinite;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Online Exam System — Network Topology</h1>
+  <p>CISCO PACKET TRACER · VLAN SEGMENTED · THREE-TIER ARCHITECTURE</p>
+</header>
+
+<div class="legend">
+  <div class="leg-item"><div class="leg-dot" style="background:#ef4444"></div>Admin VLAN 10</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#3b82f6"></div>Student VLAN 20</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#10b981"></div>Server VLAN 30</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#f59e0b"></div>Management VLAN 99</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#a78bfa"></div>WAN / Internet</div>
+</div>
+
+<div class="topo-wrap">
+<svg viewBox="0 0 960 820" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <!-- Glows -->
+  <filter id="glow-cyan"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="glow-blue"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="glow-green"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+
+  <!-- Arrow markers -->
+  <marker id="arr-cyan" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+    <path d="M0,0 L6,3 L0,6 Z" fill="#00d4ff" opacity="0.7"/>
+  </marker>
+  <marker id="arr-red" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+    <path d="M0,0 L6,3 L0,6 Z" fill="#ef4444" opacity="0.7"/>
+  </marker>
+  <marker id="arr-blue" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+    <path d="M0,0 L6,3 L0,6 Z" fill="#3b82f6" opacity="0.7"/>
+  </marker>
+  <marker id="arr-green" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+    <path d="M0,0 L6,3 L0,6 Z" fill="#10b981" opacity="0.7"/>
+  </marker>
+  <marker id="arr-purple" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+    <path d="M0,0 L6,3 L0,6 Z" fill="#a78bfa" opacity="0.7"/>
+  </marker>
+
+  <!-- Gradients -->
+  <linearGradient id="grad-internet" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#1a0533"/><stop offset="100%" stop-color="#2d0a5e"/>
+  </linearGradient>
+  <linearGradient id="grad-router" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#0a1a2e"/><stop offset="100%" stop-color="#0d2540"/>
+  </linearGradient>
+  <linearGradient id="grad-l3sw" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#001a2e"/><stop offset="100%" stop-color="#003050"/>
+  </linearGradient>
+  <linearGradient id="grad-admin" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#1a0808"/><stop offset="100%" stop-color="#2a0f0f"/>
+  </linearGradient>
+  <linearGradient id="grad-student" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#04102a"/><stop offset="100%" stop-color="#071840"/>
+  </linearGradient>
+  <linearGradient id="grad-server" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#011a10"/><stop offset="100%" stop-color="#022a1a"/>
+  </linearGradient>
+</defs>
+
+<!-- ══════════════════════════════════════════
+     ZONE BACKGROUNDS
+══════════════════════════════════════════ -->
+
+<!-- Admin Zone -->
+<rect x="30" y="480" width="200" height="310" rx="10"
+  fill="rgba(239,68,68,0.04)" stroke="rgba(239,68,68,0.2)" stroke-width="1" stroke-dasharray="6,4"/>
+<text x="130" y="500" text-anchor="middle" font-family="Share Tech Mono" font-size="9" fill="rgba(239,68,68,0.5)" letter-spacing="2">ADMIN — VLAN 10</text>
+<text x="130" y="513" text-anchor="middle" font-family="Share Tech Mono" font-size="8" fill="rgba(239,68,68,0.3)">192.168.10.0/24</text>
+
+<!-- Student Zone -->
+<rect x="370" y="480" width="220" height="310" rx="10"
+  fill="rgba(59,130,246,0.04)" stroke="rgba(59,130,246,0.2)" stroke-width="1" stroke-dasharray="6,4"/>
+<text x="480" y="500" text-anchor="middle" font-family="Share Tech Mono" font-size="9" fill="rgba(59,130,246,0.5)" letter-spacing="2">STUDENTS — VLAN 20</text>
+<text x="480" y="513" text-anchor="middle" font-family="Share Tech Mono" font-size="8" fill="rgba(59,130,246,0.3)">192.168.20.0/24</text>
+
+<!-- Server Zone -->
+<rect x="720" y="480" width="215" height="310" rx="10"
+  fill="rgba(16,185,129,0.04)" stroke="rgba(16,185,129,0.2)" stroke-width="1" stroke-dasharray="6,4"/>
+<text x="827" y="500" text-anchor="middle" font-family="Share Tech Mono" font-size="9" fill="rgba(16,185,129,0.5)" letter-spacing="2">SERVERS — VLAN 30</text>
+<text x="827" y="513" text-anchor="middle" font-family="Share Tech Mono" font-size="8" fill="rgba(16,185,129,0.3)">192.168.30.0/24</text>
+
+
+<!-- ══════════════════════════════════════════
+     CONNECTION LINES
+══════════════════════════════════════════ -->
+
+<!-- Internet → Router (WAN) -->
+<line x1="480" y1="82" x2="480" y2="130"
+  stroke="#a78bfa" stroke-width="2.5" stroke-dasharray="5,4"
+  marker-end="url(#arr-purple)" class="flow-line"/>
+<text x="495" y="112" font-family="Share Tech Mono" font-size="9" fill="#6b46c1">Serial / WAN</text>
+
+<!-- Router → L3 Core Switch -->
+<line x1="480" y1="192" x2="480" y2="242"
+  stroke="#00d4ff" stroke-width="2.5" stroke-dasharray="5,4"
+  marker-end="url(#arr-cyan)" class="flow-line"/>
+<text x="495" y="222" font-family="Share Tech Mono" font-size="9" fill="#0891b2">G0/0 Trunk</text>
+
+<!-- L3 Core → SW-Admin (trunk) -->
+<path d="M400,290 Q240,310 180,380"
+  fill="none" stroke="rgba(239,68,68,0.6)" stroke-width="2" stroke-dasharray="6,4"
+  marker-end="url(#arr-red)" class="flow-line"/>
+<text x="270" y="325" font-family="Share Tech Mono" font-size="8.5" fill="rgba(239,68,68,0.7)" transform="rotate(-20,270,325)">Trunk VLAN 10</text>
+
+<!-- L3 Core → SW-Students (trunk) -->
+<line x1="480" y1="308" x2="480" y2="380"
+  stroke="rgba(59,130,246,0.7)" stroke-width="2" stroke-dasharray="6,4"
+  marker-end="url(#arr-blue)" class="flow-line"/>
+<text x="492" y="350" font-family="Share Tech Mono" font-size="8.5" fill="rgba(59,130,246,0.7)">Trunk VLAN 20</text>
+
+<!-- L3 Core → SW-Servers (trunk) -->
+<path d="M560,290 Q720,310 800,380"
+  fill="none" stroke="rgba(16,185,129,0.6)" stroke-width="2" stroke-dasharray="6,4"
+  marker-end="url(#arr-green)" class="flow-line"/>
+<text x="665" y="322" font-family="Share Tech Mono" font-size="8.5" fill="rgba(16,185,129,0.7)" transform="rotate(20,665,322)">Trunk VLAN 30</text>
+
+<!-- SW-Admin → Admin PCs -->
+<line x1="130" y1="452" x2="80" y2="530"
+  stroke="rgba(239,68,68,0.4)" stroke-width="1.5"/>
+<line x1="130" y1="452" x2="130" y2="530"
+  stroke="rgba(239,68,68,0.4)" stroke-width="1.5"/>
+<line x1="130" y1="452" x2="180" y2="530"
+  stroke="rgba(239,68,68,0.4)" stroke-width="1.5"/>
+
+<!-- SW-Students → Student PCs -->
+<line x1="480" y1="452" x2="400" y2="530"
+  stroke="rgba(59,130,246,0.4)" stroke-width="1.5"/>
+<line x1="480" y1="452" x2="440" y2="530"
+  stroke="rgba(59,130,246,0.4)" stroke-width="1.5"/>
+<line x1="480" y1="452" x2="480" y2="530"
+  stroke="rgba(59,130,246,0.4)" stroke-width="1.5"/>
+<line x1="480" y1="452" x2="520" y2="530"
+  stroke="rgba(59,130,246,0.4)" stroke-width="1.5"/>
+<line x1="480" y1="452" x2="560" y2="530"
+  stroke="rgba(59,130,246,0.4)" stroke-width="1.5"/>
+
+<!-- SW-Servers → Servers -->
+<line x1="800" y1="452" x2="740" y2="530"
+  stroke="rgba(16,185,129,0.4)" stroke-width="1.5"/>
+<line x1="800" y1="452" x2="780" y2="530"
+  stroke="rgba(16,185,129,0.4)" stroke-width="1.5"/>
+<line x1="800" y1="452" x2="820" y2="530"
+  stroke="rgba(16,185,129,0.4)" stroke-width="1.5"/>
+<line x1="800" y1="452" x2="860" y2="530"
+  stroke="rgba(16,185,129,0.4)" stroke-width="1.5"/>
+<line x1="800" y1="452" x2="900" y2="530"
+  stroke="rgba(16,185,129,0.4)" stroke-width="1.5"/>
+
+
+<!-- ══════════════════════════════════════════
+     INTERNET CLOUD  (top center)
+══════════════════════════════════════════ -->
+<g id="node-internet" class="node" data-name="Internet / Cloud"
+   data-info="WAN Connection&#10;IP: 203.0.113.2&#10;Protocol: Serial / PPP&#10;NAT/PAT boundary"
+   transform="translate(480,50)" style="cursor:pointer">
+  <!-- Cloud shape -->
+  <ellipse cx="0" cy="-2" rx="68" ry="28" fill="url(#grad-internet)" stroke="#7c3aed" stroke-width="1.5" filter="url(#glow-blue)"/>
+  <ellipse cx="-30" cy="6" rx="30" ry="18" fill="url(#grad-internet)" stroke="#7c3aed" stroke-width="1"/>
+  <ellipse cx="30" cy="6" rx="30" ry="18" fill="url(#grad-internet)" stroke="#7c3aed" stroke-width="1"/>
+  <ellipse cx="0" cy="12" rx="50" ry="16" fill="url(#grad-internet)" stroke="#7c3aed" stroke-width="1"/>
+  <!-- Icon -->
+  <text y="6" text-anchor="middle" font-size="18" fill="#a78bfa">☁</text>
+  <text y="-18" text-anchor="middle" font-family="Rajdhani" font-weight="700" font-size="11" fill="#c4b5fd" letter-spacing="1">INTERNET</text>
+  <text y="26" text-anchor="middle" font-family="Share Tech Mono" font-size="8" fill="#6b46c1">203.0.113.0/30</text>
+</g>
+
+
+<!-- ══════════════════════════════════════════
+     EDGE ROUTER
+══════════════════════════════════════════ -->
+<g id="node-router" class="node" data-name="Edge Router (Cisco 2911)"
+   data-info="G0/0 → Core Switch (inside)&#10;G0/1 → Internet (outside)&#10;NAT/PAT Overload&#10;ACL: permit 192.168.0.0/16&#10;IP: 10.0.0.1 / 203.0.113.1"
+   transform="translate(480,162)" style="cursor:pointer">
+  <rect x="-60" y="-30" width="120" height="60" rx="6"
+    fill="url(#grad-router)" stroke="#00d4ff" stroke-width="1.8" filter="url(#glow-cyan)"/>
+  <!-- Router symbol (cylinder stack) -->
+  <rect x="-28" y="-14" width="56" height="8" rx="2" fill="rgba(0,212,255,0.15)" stroke="rgba(0,212,255,0.5)" stroke-width="1"/>
+  <rect x="-28" y="-3" width="56" height="8" rx="2" fill="rgba(0,212,255,0.1)" stroke="rgba(0,212,255,0.4)" stroke-width="1"/>
+  <rect x="-28" y="8" width="56" height="8" rx="2" fill="rgba(0,212,255,0.07)" stroke="rgba(0,212,255,0.3)" stroke-width="1"/>
+  <text x="0" y="-18" text-anchor="middle" font-family="Rajdhani" font-weight="700" font-size="11" fill="#7dd3fc" letter-spacing="1">EDGE ROUTER</text>
+  <text x="0" y="38" text-anchor="middle" font-family="Share Tech Mono" font-size="8" fill="#0891b2">Cisco 2911 · NAT/PAT</text>
+</g>
+
+
+<!-- ══════════════════════════════════════════
+     L3 CORE SWITCH
+══════════════════════════════════════════ -->
+<g id="node-l3sw" class="node" data-name="L3 Core Switch (Cisco 3560)"
+   data-info="Inter-VLAN Routing (SVIs)&#10;VLAN 10 GW: 192.168.10.1&#10;VLAN 20 GW: 192.168.20.1&#10;VLAN 30 GW: 192.168.30.1&#10;ip routing enabled&#10;DHCP Relay: ip helper-address"
+   transform="translate(480,275)" style="cursor:pointer">
+  <rect x="-80" y="-33" width="160" height="66" rx="6"
+    fill="url(#grad-l3sw)" stroke="#00d4ff" stroke-width="2" filter="url(#glow-cyan)"/>
+  <!-- Switch ports visual -->
+  <g fill="rgba(0,212,255,0.25)" stroke="rgba(0,212,255,0.6)" stroke-width="0.8">
+    <rect x="-65" y="-10" width="10" height="8" rx="1"/>
+    <rect x="-52" y="-10" width="10" height="8" rx="1"/>
+    <rect x="-39" y="-10" width="10" height="8" rx="1"/>
+    <rect x="-26" y="-10" width="10" height="8" rx="1"/>
+    <rect x="-13" y="-10" width="10" height="8" rx="1"/>
+    <rect x="0" y="-10" width="10" height="8" rx="1"/>
+    <rect x="13" y="-10" width="10" height="8" rx="1"/>
+    <rect x="26" y="-10" width="10" height="8" rx="1"/>
+    <rect x="39" y="-10" width="10" height="8" rx="1"/>
+    <rect x="52" y="-10" width="10" height="8" rx="1"/>
+  </g>
+  <rect x="-60" y="4" width="120" height="6" rx="2" fill="rgba(0,212,255,0.08)" stroke="rgba(0,212,255,0.2)" stroke-width="0.5"/>
+  <text x="0" y="-20" text-anchor="middle" font-family="Rajdhani" font-weight="700" font-size="12" fill="#7dd3fc" letter-spacing="1">CORE L3 SWITCH</text>
+  <text x="0" y="42" text-anchor="middle" font-family="Share Tech Mono" font-size="8" fill="#0891b2">Cisco 3560 · ip routing · SVIs</text>
+</g>
+
+
+<!-- ══════════════════════════════════════════
+     ACCESS SWITCH — ADMIN
+══════════════════════════════════════════ -->
+<g id="node-sw-admin" class="node" data-name="SW-Admin (Cisco 2960)"
+   data-info="VLAN 10 — Admin&#10;Ports fa0/1-2 → Admin PCs&#10;Port g0/1 → Trunk (Core)&#10;Port Security: max 1 MAC&#10;SSH enabled, Telnet disabled&#10;VLAN 99: Management"
+   transform="translate(130,416)" style="cursor:pointer">
+  <rect x="-70" y="-28" width="140" height="56" rx="5"
+    fill="url(#grad-admin)" stroke="rgba(239,68,68,0.7)" stroke-width="1.5"/>
+  <g fill="rgba(239,68,68,0.2)" stroke="rgba(239,68,68,0.5)" stroke-width="0.8">
+    <rect x="-52" y="-8" width="9" height="7" rx="1"/>
+    <rect x="-41" y="-8" width="9" height="7" rx="1"/>
+    <rect x="-30" y="-8" width="9" height="7" rx="1"/>
+    <rect x="-19" y="-8" width="9" height="7" rx="1"/>
+    <rect x="-8" y="-8" width="9" height="7" rx="1"/>
+    <rect x="3" y="-8" width="9" height="7" rx="1"/>
+    <rect x="14" y="-8" width="9" height="7" rx="1"/>
+    <rect x="25" y="-8" width="9" height="7" rx="1"/>
+    <rect x="36" y="-8" width="9" height="7" rx="1"/>
+    <rect x="47" y="-8" width="9" height="7" rx="1"/>
+  </g>
+  <text x="0" y="-16" text-anchor="middle" font-family="Rajdhani" font-weight="700" font-size="10" fill="#fca5a5" letter-spacing="1">SW-ADMIN</text>
+  <text x="0" y="34" text-anchor="middle" font-family="Share Tech Mono" font-size="8" fill="rgba(239,68,68,0.6)">Cisco 2960 · VLAN 10</text>
+</g>
+
+
+<!-- ══════════════════════════════════════════
+     ACCESS SWITCH — STUDENTS
+══════════════════════════════════════════ -->
+<g id="node-sw-students" class="node" data-name="SW-Students (Cisco 2960)"
+   data-info="VLAN 20 — Students&#10;Ports fa0/1-10 → Student PCs&#10;Port g0/1 → Trunk (Core)&#10;Port Security: max 1 MAC sticky&#10;DHCP Snooping enabled&#10;Violation mode: shutdown"
+   transform="translate(480,416)" style="cursor:pointer">
+  <rect x="-70" y="-28" width="140" height="56" rx="5"
+    fill="url(#grad-student)" stroke="rgba(59,130,246,0.7)" stroke-width="1.5"/>
+  <g fill="rgba(59,130,246,0.2)" stroke="rgba(59,130,246,0.5)" stroke-width="0.8">
+    <rect x="-52" y="-8" width="9" height="7" rx="1"/>
+    <rect x="-41" y="-8" width="9" height="7" rx="1"/>
+    <rect x="-30" y="-8" width="9" height="7" rx="1"/>
+    <rect x="-19" y="-8" width="9" height="7" rx="1"/>
+    <rect x="-8" y="-8" width="9" height="7" rx="1"/>
+    <rect x="3" y="-8" width="9" height="7" rx="1"/>
+    <rect x="14" y="-8" width="9" height="7" rx="1"/>
+    <rect x="25" y="-8" width="9" height="7" rx="1"/>
+    <rect x="36" y="-8" width="9" height="7" rx="1"/>
+    <rect x="47" y="-8" width="9" height="7" rx="1"/>
+  </g>
+  <text x="0" y="-16" text-anchor="middle" font-family="Rajdhani" font-weight="700" font-size="10" fill="#93c5fd" letter-spacing="1">SW-STUDENTS</text>
+  <text x="0" y="34" text-anchor="middle" font-family="Share Tech Mono" font-size="8" fill="rgba(59,130,246,0.6)">Cisco 2960 · VLAN 20</text>
+</g>
+
+
+<!-- ══════════════════════════════════════════
+     ACCESS SWITCH — SERVERS
+══════════════════════════════════════════ -->
+<g id="node-sw-servers" class="node" data-name="SW-Servers (Cisco 2960)"
+   data-info="VLAN 30 — Server Farm&#10;Ports fa0/1-5 → Servers&#10;Port g0/1 → Trunk (Core)&#10;All server ports: access mode&#10;No port security (static IPs)"
+   transform="translate(800,416)" style="cursor:pointer">
+  <rect x="-70" y="-28" width="140" height="56" rx="5"
+    fill="url(#grad-server)" stroke="rgba(16,185,129,0.7)" stroke-width="1.5"/>
+  <g fill="rgba(16,185,129,0.2)" stroke="rgba(16,185,129,0.5)" stroke-width="0.8">
+    <rect x="-52" y="-8" width="9" height="7" rx="1"/>
+    <rect x="-41" y="-8" width="9" height="7" rx="1"/>
+    <rect x="-30" y="-8" width="9" height="7" rx="1"/>
+    <rect x="-19" y="-8" width="9" height="7" rx="1"/>
+    <rect x="-8" y="-8" width="9" height="7" rx="1"/>
+    <rect x="3" y="-8" width="9" height="7" rx="1"/>
+    <rect x="14" y="-8" width="9" height="7" rx="1"/>
+    <rect x="25" y="-8" width="9" height="7" rx="1"/>
+    <rect x="36" y="-8" width="9" height="7" rx="1"/>
+    <rect x="47" y="-8" width="9" height="7" rx="1"/>
+  </g>
+  <text x="0" y="-16" text-anchor="middle" font-family="Rajdhani" font-weight="700" font-size="10" fill="#6ee7b7" letter-spacing="1">SW-SERVERS</text>
+  <text x="0" y="34" text-anchor="middle" font-family="Share Tech Mono" font-size="8" fill="rgba(16,185,129,0.6)">Cisco 2960 · VLAN 30</text>
+</g>
+
+
+<!-- ══════════════════════════════════════════
+     ADMIN PCs
+══════════════════════════════════════════ -->
+<!-- Admin PC 1 -->
+<g class="node" data-name="Admin PC 1"
+   data-info="Role: Administrator&#10;IP: 192.168.10.2&#10;Mask: 255.255.255.0&#10;GW: 192.168.10.1&#10;DNS: 192.168.30.11&#10;VLAN 10 — Static IP"
+   transform="translate(80,570)" style="cursor:pointer">
+  <rect x="-32" y="-22" width="64" height="44" rx="4" fill="url(#grad-admin)" stroke="rgba(239,68,68,0.5)" stroke-width="1.2"/>
+  <rect x="-20" y="-16" width="40" height="26" rx="2" fill="rgba(239,68,68,0.1)" stroke="rgba(239,68,68,0.3)" stroke-width="0.8"/>
+  <rect x="-12" y="10" width="24" height="5" rx="1" fill="rgba(239,68,68,0.2)"/>
+  <text x="0" y="-30" text-anchor="middle" font-family="Share Tech Mono" font-size="7.5" fill="#fca5a5">ADMIN-PC1</text>
+  <text x="0" y="32" text-anchor="middle" font-family="Share Tech Mono" font-size="7" fill="rgba(239,68,68,0.5)">.10.2</text>
+</g>
+
+<!-- Admin PC 2 -->
+<g class="node" data-name="Admin PC 2"
+   data-info="Role: Administrator&#10;IP: 192.168.10.3&#10;Mask: 255.255.255.0&#10;GW: 192.168.10.1&#10;DNS: 192.168.30.11&#10;VLAN 10 — Static IP"
+   transform="translate(130,570)" style="cursor:pointer">
+  <rect x="-32" y="-22" width="64" height="44" rx="4" fill="url(#grad-admin)" stroke="rgba(239,68,68,0.5)" stroke-width="1.2"/>
+  <rect x="-20" y="-16" width="40" height="26" rx="2" fill="rgba(239,68,68,0.1)" stroke="rgba(239,68,68,0.3)" stroke-width="0.8"/>
+  <rect x="-12" y="10" width="24" height="5" rx="1" fill="rgba(239,68,68,0.2)"/>
+  <text x="0" y="-30" text-anchor="middle" font-family="Share Tech Mono" font-size="7.5" fill="#fca5a5">ADMIN-PC2</text>
+  <text x="0" y="32" text-anchor="middle" font-family="Share Tech Mono" font-size="7" fill="rgba(239,68,68,0.5)">.10.3</text>
+</g>
+
+<!-- Instructor PC -->
+<g class="node" data-name="Instructor PC"
+   data-info="Role: Instructor / Exam Creator&#10;IP: 192.168.10.10&#10;Mask: 255.255.255.0&#10;GW: 192.168.10.1&#10;FTP access to upload exams&#10;VLAN 10 — Static IP"
+   transform="translate(180,570)" style="cursor:pointer">
+  <rect x="-32" y="-22" width="64" height="44" rx="4" fill="url(#grad-admin)" stroke="rgba(239,68,68,0.6)" stroke-width="1.5"/>
+  <rect x="-20" y="-16" width="40" height="26" rx="2" fill="rgba(239,68,68,0.15)" stroke="rgba(239,68,68,0.4)" stroke-width="0.8"/>
+  <rect x="-12" y="10" width="24" height="5" rx="1" fill="rgba(239,68,68,0.25)"/>
+  <text x="0" y="-30" text-anchor="middle" font-family="Share Tech Mono" font-size="7.5" fill="#fca5a5">INSTRUCTOR</text>
+  <text x="0" y="32" text-anchor="middle" font-family="Share Tech Mono" font-size="7" fill="rgba(239,68,68,0.5)">.10.10</text>
+</g>
+
+
+<!-- ══════════════════════════════════════════
+     STUDENT PCs (5 shown, represents 10)
+══════════════════════════════════════════ -->
+<g class="node" data-name="Student PC 1"
+   data-info="Role: Exam Candidate&#10;IP: DHCP → 192.168.20.100+&#10;GW: 192.168.20.1&#10;DNS: 192.168.30.11&#10;Access: Web server ONLY&#10;Port Security: 1 MAC sticky"
+   transform="translate(400,570)" style="cursor:pointer">
+  <rect x="-28" y="-20" width="56" height="40" rx="3" fill="url(#grad-student)" stroke="rgba(59,130,246,0.5)" stroke-width="1.2"/>
+  <rect x="-18" y="-14" width="36" height="22" rx="2" fill="rgba(59,130,246,0.1)" stroke="rgba(59,130,246,0.3)" stroke-width="0.8"/>
+  <rect x="-10" y="9" width="20" height="4" rx="1" fill="rgba(59,130,246,0.2)"/>
+  <text x="0" y="-28" text-anchor="middle" font-family="Share Tech Mono" font-size="7" fill="#93c5fd">STU-01</text>
+  <text x="0" y="30" text-anchor="middle" font-family="Share Tech Mono" font-size="6.5" fill="rgba(59,130,246,0.5)">DHCP</text>
+</g>
+
+<g class="node" data-name="Student PC 2"
+   data-info="Role: Exam Candidate&#10;IP: DHCP → 192.168.20.101&#10;GW: 192.168.20.1&#10;DNS: 192.168.30.11&#10;Access: Web server ONLY"
+   transform="translate(440,570)" style="cursor:pointer">
+  <rect x="-28" y="-20" width="56" height="40" rx="3" fill="url(#grad-student)" stroke="rgba(59,130,246,0.5)" stroke-width="1.2"/>
+  <rect x="-18" y="-14" width="36" height="22" rx="2" fill="rgba(59,130,246,0.1)" stroke="rgba(59,130,246,0.3)" stroke-width="0.8"/>
+  <rect x="-10" y="9" width="20" height="4" rx="1" fill="rgba(59,130,246,0.2)"/>
+  <text x="0" y="-28" text-anchor="middle" font-family="Share Tech Mono" font-size="7" fill="#93c5fd">STU-02</text>
+  <text x="0" y="30" text-anchor="middle" font-family="Share Tech Mono" font-size="6.5" fill="rgba(59,130,246,0.5)">DHCP</text>
+</g>
+
+<g class="node" data-name="Student PC 3"
+   data-info="Role: Exam Candidate&#10;IP: DHCP → 192.168.20.102&#10;GW: 192.168.20.1&#10;DNS: 192.168.30.11&#10;Access: Web server ONLY"
+   transform="translate(480,570)" style="cursor:pointer">
+  <rect x="-28" y="-20" width="56" height="40" rx="3" fill="url(#grad-student)" stroke="rgba(59,130,246,0.5)" stroke-width="1.2"/>
+  <rect x="-18" y="-14" width="36" height="22" rx="2" fill="rgba(59,130,246,0.1)" stroke="rgba(59,130,246,0.3)" stroke-width="0.8"/>
+  <rect x="-10" y="9" width="20" height="4" rx="1" fill="rgba(59,130,246,0.2)"/>
+  <text x="0" y="-28" text-anchor="middle" font-family="Share Tech Mono" font-size="7" fill="#93c5fd">STU-03</text>
+  <text x="0" y="30" text-anchor="middle" font-family="Share Tech Mono" font-size="6.5" fill="rgba(59,130,246,0.5)">DHCP</text>
+</g>
+
+<g class="node" data-name="Student PC 4"
+   data-info="Role: Exam Candidate&#10;IP: DHCP → 192.168.20.103&#10;GW: 192.168.20.1&#10;DNS: 192.168.30.11&#10;Access: Web server ONLY"
+   transform="translate(520,570)" style="cursor:pointer">
+  <rect x="-28" y="-20" width="56" height="40" rx="3" fill="url(#grad-student)" stroke="rgba(59,130,246,0.5)" stroke-width="1.2"/>
+  <rect x="-18" y="-14" width="36" height="22" rx="2" fill="rgba(59,130,246,0.1)" stroke="rgba(59,130,246,0.3)" stroke-width="0.8"/>
+  <rect x="-10" y="9" width="20" height="4" rx="1" fill="rgba(59,130,246,0.2)"/>
+  <text x="0" y="-28" text-anchor="middle" font-family="Share Tech Mono" font-size="7" fill="#93c5fd">STU-04</text>
+  <text x="0" y="30" text-anchor="middle" font-family="Share Tech Mono" font-size="6.5" fill="rgba(59,130,246,0.5)">DHCP</text>
+</g>
+
+<g class="node" data-name="Student Laptop (WiFi)"
+   data-info="Role: Wireless Exam Candidate&#10;IP: DHCP via WAP → VLAN 20&#10;GW: 192.168.20.1&#10;Auth: WPA2-PSK&#10;WAP: 192.168.20.50&#10;Access: Web server ONLY"
+   transform="translate(560,570)" style="cursor:pointer">
+  <rect x="-28" y="-20" width="56" height="40" rx="3" fill="url(#grad-student)" stroke="rgba(59,130,246,0.7)" stroke-width="1.5"/>
+  <rect x="-18" y="-14" width="36" height="22" rx="2" fill="rgba(59,130,246,0.15)" stroke="rgba(59,130,246,0.4)" stroke-width="0.8"/>
+  <rect x="-10" y="9" width="20" height="4" rx="1" fill="rgba(59,130,246,0.25)"/>
+  <!-- WiFi symbol -->
+  <text x="14" y="-12" font-size="9" fill="#60a5fa">⌁</text>
+  <text x="0" y="-28" text-anchor="middle" font-family="Share Tech Mono" font-size="7" fill="#93c5fd">LAPTOP</text>
+  <text x="0" y="30" text-anchor="middle" font-family="Share Tech Mono" font-size="6.5" fill="rgba(59,130,246,0.5)">WiFi</text>
+</g>
+
+<!-- "×10" label -->
+<text x="480" y="625" text-anchor="middle" font-family="Share Tech Mono" font-size="9" fill="rgba(59,130,246,0.5)">← 10 Student PCs Total (5 shown) →</text>
+
+
+<!-- ══════════════════════════════════════════
+     SERVERS
+══════════════════════════════════════════ -->
+
+<!-- Web Server -->
+<g class="node" data-name="Web Server (HTTP)"
+   data-info="Service: HTTP / HTTPS&#10;IP: 192.168.30.10&#10;Hostname: exam.university.edu&#10;Port 80 open&#10;Hosts exam portal (index.html)&#10;DNS resolves to this IP"
+   transform="translate(740,570)" style="cursor:pointer">
+  <rect x="-30" y="-32" width="60" height="64" rx="4" fill="url(#grad-server)" stroke="rgba(16,185,129,0.6)" stroke-width="1.5"/>
+  <rect x="-22" y="-24" width="44" height="30" rx="2" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.3)" stroke-width="0.8"/>
+  <rect x="-20" y="10" width="40" height="4" rx="1" fill="rgba(16,185,129,0.15)"/>
+  <rect x="-20" y="16" width="30" height="4" rx="1" fill="rgba(16,185,129,0.1)"/>
+  <text x="0" y="-38" text-anchor="middle" font-family="Share Tech Mono" font-size="7.5" fill="#6ee7b7">WEB SRV</text>
+  <text x="0" y="42" text-anchor="middle" font-family="Share Tech Mono" font-size="7" fill="rgba(16,185,129,0.5)">.30.10</text>
+  <text x="0" y="52" text-anchor="middle" font-family="Share Tech Mono" font-size="6" fill="rgba(16,185,129,0.4)">HTTP:80</text>
+</g>
+
+<!-- DNS Server -->
+<g class="node" data-name="DNS Server"
+   data-info="Service: DNS (UDP/53)&#10;IP: 192.168.30.11&#10;Record: exam.university.edu&#10;→ 192.168.30.10&#10;Used by all VLANs&#10;Pushed via DHCP"
+   transform="translate(780,570)" style="cursor:pointer">
+  <rect x="-30" y="-32" width="60" height="64" rx="4" fill="url(#grad-server)" stroke="rgba(16,185,129,0.6)" stroke-width="1.5"/>
+  <rect x="-22" y="-24" width="44" height="30" rx="2" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.3)" stroke-width="0.8"/>
+  <rect x="-20" y="10" width="40" height="4" rx="1" fill="rgba(16,185,129,0.15)"/>
+  <rect x="-20" y="16" width="30" height="4" rx="1" fill="rgba(16,185,129,0.1)"/>
+  <text x="0" y="-38" text-anchor="middle" font-family="Share Tech Mono" font-size="7.5" fill="#6ee7b7">DNS SRV</text>
+  <text x="0" y="42" text-anchor="middle" font-family="Share Tech Mono" font-size="7" fill="rgba(16,185,129,0.5)">.30.11</text>
+  <text x="0" y="52" text-anchor="middle" font-family="Share Tech Mono" font-size="6" fill="rgba(16,185,129,0.4)">UDP:53</text>
+</g>
+
+<!-- DHCP Server -->
+<g class="node" data-name="DHCP Server"
+   data-info="Service: DHCP (UDP/67-68)&#10;IP: 192.168.30.12&#10;Pool: StudentPool&#10;Range: 192.168.20.100-200&#10;GW pushed: 192.168.20.1&#10;DNS pushed: 192.168.30.11"
+   transform="translate(820,570)" style="cursor:pointer">
+  <rect x="-30" y="-32" width="60" height="64" rx="4" fill="url(#grad-server)" stroke="rgba(16,185,129,0.6)" stroke-width="1.5"/>
+  <rect x="-22" y="-24" width="44" height="30" rx="2" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.3)" stroke-width="0.8"/>
+  <rect x="-20" y="10" width="40" height="4" rx="1" fill="rgba(16,185,129,0.15)"/>
+  <rect x="-20" y="16" width="30" height="4" rx="1" fill="rgba(16,185,129,0.1)"/>
+  <text x="0" y="-38" text-anchor="middle" font-family="Share Tech Mono" font-size="7.5" fill="#6ee7b7">DHCP SRV</text>
+  <text x="0" y="42" text-anchor="middle" font-family="Share Tech Mono" font-size="7" fill="rgba(16,185,129,0.5)">.30.12</text>
+  <text x="0" y="52" text-anchor="middle" font-family="Share Tech Mono" font-size="6" fill="rgba(16,185,129,0.4)">UDP:67</text>
+</g>
+
+<!-- FTP Server -->
+<g class="node" data-name="FTP Server"
+   data-info="Service: FTP (TCP/21)&#10;IP: 192.168.30.13&#10;Used by Admin to upload exams&#10;Username/password protected&#10;Store exam question files&#10;Admin VLAN access only"
+   transform="translate(860,570)" style="cursor:pointer">
+  <rect x="-30" y="-32" width="60" height="64" rx="4" fill="url(#grad-server)" stroke="rgba(16,185,129,0.6)" stroke-width="1.5"/>
+  <rect x="-22" y="-24" width="44" height="30" rx="2" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.3)" stroke-width="0.8"/>
+  <rect x="-20" y="10" width="40" height="4" rx="1" fill="rgba(16,185,129,0.15)"/>
+  <rect x="-20" y="16" width="30" height="4" rx="1" fill="rgba(16,185,129,0.1)"/>
+  <text x="0" y="-38" text-anchor="middle" font-family="Share Tech Mono" font-size="7.5" fill="#6ee7b7">FTP SRV</text>
+  <text x="0" y="42" text-anchor="middle" font-family="Share Tech Mono" font-size="7" fill="rgba(16,185,129,0.5)">.30.13</text>
+  <text x="0" y="52" text-anchor="middle" font-family="Share Tech Mono" font-size="6" fill="rgba(16,185,129,0.4)">TCP:21</text>
+</g>
+
+<!-- NTP Server -->
+<g class="node" data-name="NTP Server"
+   data-info="Service: NTP (UDP/123)&#10;IP: 192.168.30.14&#10;Provides time sync to all devices&#10;Critical for exam timer accuracy&#10;Stratum 2 server&#10;All switches sync from this"
+   transform="translate(900,570)" style="cursor:pointer">
+  <rect x="-30" y="-32" width="60" height="64" rx="4" fill="url(#grad-server)" stroke="rgba(16,185,129,0.7)" stroke-width="1.8"/>
+  <rect x="-22" y="-24" width="44" height="30" rx="2" fill="rgba(16,185,129,0.12)" stroke="rgba(16,185,129,0.4)" stroke-width="0.8"/>
+  <rect x="-20" y="10" width="40" height="4" rx="1" fill="rgba(16,185,129,0.2)"/>
+  <rect x="-20" y="16" width="30" height="4" rx="1" fill="rgba(16,185,129,0.15)"/>
+  <text x="0" y="-38" text-anchor="middle" font-family="Share Tech Mono" font-size="7.5" fill="#6ee7b7">NTP SRV</text>
+  <text x="0" y="42" text-anchor="middle" font-family="Share Tech Mono" font-size="7" fill="rgba(16,185,129,0.5)">.30.14</text>
+  <text x="0" y="52" text-anchor="middle" font-family="Share Tech Mono" font-size="6" fill="rgba(16,185,129,0.4)">UDP:123</text>
+</g>
+
+
+<!-- ══════════════════════════════════════════
+     FIREWALL / ACL LABEL (between L3SW and L2 switches)
+══════════════════════════════════════════ -->
+<rect x="330" y="345" width="100" height="24" rx="4" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.35)" stroke-width="1" stroke-dasharray="3,2"/>
+<text x="380" y="361" text-anchor="middle" font-family="Share Tech Mono" font-size="8" fill="#f59e0b">🔒 ACL 101 APPLIED</text>
+
+<!-- IP Helper label -->
+<rect x="170" y="345" width="120" height="24" rx="4" fill="rgba(245,158,11,0.05)" stroke="rgba(245,158,11,0.25)" stroke-width="1" stroke-dasharray="3,2"/>
+<text x="230" y="361" text-anchor="middle" font-family="Share Tech Mono" font-size="8" fill="rgba(245,158,11,0.7)">ip helper-address</text>
+
+
+<!-- ══════════════════════════════════════════
+     INTERFACE LABELS on Router
+══════════════════════════════════════════ -->
+<text x="545" y="148" font-family="Share Tech Mono" font-size="8" fill="#6b46c1">G0/1 → WAN</text>
+<text x="545" y="186" font-family="Share Tech Mono" font-size="8" fill="#0891b2">G0/0 → LAN</text>
+
+
+<!-- ══════════════════════════════════════════
+     BOTTOM LEGEND / INFO TABLE
+══════════════════════════════════════════ -->
+<rect x="20" y="660" width="920" height="145" rx="8" fill="rgba(5,15,30,0.8)" stroke="rgba(0,180,255,0.12)" stroke-width="1"/>
+
+<text x="480" y="682" text-anchor="middle" font-family="Rajdhani" font-weight="700" font-size="12" fill="#7dd3fc" letter-spacing="3">QUICK REFERENCE — IP ADDRESS TABLE</text>
+
+<!-- Headers -->
+<text x="60"  y="700" font-family="Share Tech Mono" font-size="8.5" fill="#0891b2">DEVICE</text>
+<text x="220" y="700" font-family="Share Tech Mono" font-size="8.5" fill="#0891b2">IP ADDRESS</text>
+<text x="350" y="700" font-family="Share Tech Mono" font-size="8.5" fill="#0891b2">VLAN</text>
+<text x="430" y="700" font-family="Share Tech Mono" font-size="8.5" fill="#0891b2">SERVICE / ROLE</text>
+<text x="680" y="700" font-family="Share Tech Mono" font-size="8.5" fill="#0891b2">GATEWAY</text>
+<line x1="30" y1="705" x2="930" y2="705" stroke="rgba(0,180,255,0.15)" stroke-width="0.5"/>
+
+<!-- Rows -->
+<text x="60" y="720" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">Edge Router G0/0</text>
+<text x="220" y="720" font-family="Share Tech Mono" font-size="8" fill="#7dd3fc">10.0.0.1</text>
+<text x="350" y="720" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">—</text>
+<text x="430" y="720" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">NAT inside / Core link</text>
+<text x="680" y="720" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">203.0.113.2</text>
+
+<text x="60" y="734" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">Core L3 Switch VLAN10</text>
+<text x="220" y="734" font-family="Share Tech Mono" font-size="8" fill="#fca5a5">192.168.10.1</text>
+<text x="350" y="734" font-family="Share Tech Mono" font-size="8" fill="#fca5a5">10</text>
+<text x="430" y="734" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">Admin Gateway (SVI)</text>
+
+<text x="60" y="748" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">Core L3 Switch VLAN20</text>
+<text x="220" y="748" font-family="Share Tech Mono" font-size="8" fill="#93c5fd">192.168.20.1</text>
+<text x="350" y="748" font-family="Share Tech Mono" font-size="8" fill="#93c5fd">20</text>
+<text x="430" y="748" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">Student Gateway (SVI)</text>
+
+<text x="60" y="762" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">Core L3 Switch VLAN30</text>
+<text x="220" y="762" font-family="Share Tech Mono" font-size="8" fill="#6ee7b7">192.168.30.1</text>
+<text x="350" y="762" font-family="Share Tech Mono" font-size="8" fill="#6ee7b7">30</text>
+<text x="430" y="762" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">Server Gateway (SVI)</text>
+
+<!-- col 2 -->
+<text x="480" y="720" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">Web Server</text>
+<text x="580" y="720" font-family="Share Tech Mono" font-size="8" fill="#6ee7b7">192.168.30.10</text>
+<text x="700" y="720" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">HTTP/80</text>
+<text x="800" y="720" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">exam.university.edu</text>
+
+<text x="480" y="734" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">DNS Server</text>
+<text x="580" y="734" font-family="Share Tech Mono" font-size="8" fill="#6ee7b7">192.168.30.11</text>
+<text x="700" y="734" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">UDP/53</text>
+<text x="800" y="734" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">Name resolution</text>
+
+<text x="480" y="748" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">DHCP Server</text>
+<text x="580" y="748" font-family="Share Tech Mono" font-size="8" fill="#6ee7b7">192.168.30.12</text>
+<text x="700" y="748" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">UDP/67-68</text>
+<text x="800" y="748" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">Pool: 20.100–20.200</text>
+
+<text x="480" y="762" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">FTP / NTP Servers</text>
+<text x="580" y="762" font-family="Share Tech Mono" font-size="8" fill="#6ee7b7">.30.13 / .30.14</text>
+<text x="700" y="762" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">TCP/21 UDP/123</text>
+<text x="800" y="762" font-family="Share Tech Mono" font-size="8" fill="#94a3b8">Exam files / Time sync</text>
+
+<line x1="30" y1="770" x2="930" y2="770" stroke="rgba(0,180,255,0.08)" stroke-width="0.5"/>
+<text x="480" y="787" text-anchor="middle" font-family="Share Tech Mono" font-size="8" fill="rgba(245,158,11,0.6)">⚠  ACL: Students (VLAN20) → permit TCP to .30.10:80, permit UDP to .30.11:53 | deny all to VLAN10 | deny all to VLAN30</text>
+<text x="480" y="798" text-anchor="middle" font-family="Share Tech Mono" font-size="8" fill="rgba(0,180,255,0.4)">Click any device to view its full configuration details</text>
+
+</svg>
+</div>
+
+<!-- TOOLTIP -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const tooltip = document.getElementById('tooltip');
+
+document.querySelectorAll('.node').forEach(node => {
+  node.addEventListener('mouseenter', (e) => {
+    const name = node.dataset.name;
+    const info = node.dataset.info;
+    if (!name) return;
+    const lines = info.split('&#10;').join('\n').split('\n');
+    let html = `<strong>${name}</strong>`;
+    lines.forEach(line => {
+      const parts = line.split(':');
+      if (parts.length >= 2) {
+        html += `<div><span>${parts[0]}:</span> ${parts.slice(1).join(':').trim()}</div>`;
+      } else {
+        html += `<div>${line}</div>`;
+      }
+    });
+    tooltip.innerHTML = html;
+    tooltip.classList.add('show');
+  });
+
+  node.addEventListener('mousemove', (e) => {
+    tooltip.style.left = (e.clientX + 14) + 'px';
+    tooltip.style.top = (e.clientY - 10) + 'px';
+  });
+
+  node.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('show');
+  });
+});
+</script>
+</body>
+</html>
